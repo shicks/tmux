@@ -574,6 +574,11 @@ const struct options_table_entry window_options_table[] = {
 	  .default_num = 0
 	},
 
+	{ .name = "mouse-scroll-cursor",
+	  .type = OPTIONS_TABLE_FLAG,
+	  .default_num = 1
+	},
+
 	{ .name = "other-pane-height",
 	  .type = OPTIONS_TABLE_NUMBER,
 	  .minimum = 0,

@@ -831,11 +831,30 @@ window_copy_mouse(
 	/* If mouse wheel (buttons 4 and 5), scroll. */
 	if (m->event == MOUSE_EVENT_WHEEL) {
 		if (m->wheel == MOUSE_WHEEL_UP) {
-			for (i = 0; i < 5; i++)
-				window_copy_cursor_up(wp, 0);
+			if (!options_get_number(&wp->window->options,
+						"mouse-scroll-cursor")) {
+				data->oy += 5;
+				if (data->oy > screen_hsize(data->backing))
+					data->oy = screen_hsize(data->backing);
+				window_copy_update_selection(wp);
+				window_copy_redraw_screen(wp);
+			} else {
+				for (i = 0; i < 5; i++)
+					window_copy_cursor_up(wp, 0);
+			}
 		} else if (m->wheel == MOUSE_WHEEL_DOWN) {
-			for (i = 0; i < 5; i++)
-				window_copy_cursor_down(wp, 0);
+			if (!options_get_number(&wp->window->options,
+						"mouse-scroll-cursor")) {
+				if (data->oy > 5)
+					data->oy -= 5;
+				else
+					data->oy = 0;
+				window_copy_update_selection(wp);
+				window_copy_redraw_screen(wp);
+			} else {
+				for (i = 0; i < 5; i++)
+					window_copy_cursor_down(wp, 0);
+			}
 			if (data->oy == 0)
 				goto reset_mode;
 		}

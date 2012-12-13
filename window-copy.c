@@ -439,6 +439,7 @@ window_copy_key(struct window_pane *wp, struct session *sess, int key)
 			window_copy_pageup(wp);
 		break;
 	case MODEKEYCOPY_NEXTPAGE:
+	case MODEKEYCOPY_NEXTPAGECANCEL:
 		n = 1;
 		if (screen_size_y(s) > 2)
 			n = screen_size_y(s) - 2;
@@ -450,6 +451,11 @@ window_copy_key(struct window_pane *wp, struct session *sess, int key)
 		}
 		window_copy_update_selection(wp);
 		window_copy_redraw_screen(wp);
+		if (cmd == MODEKEYCOPY_NEXTPAGECANCEL
+				&& data->oy == 0 && sess != NULL) {
+			window_copy_copy_selection(wp, -1);
+			window_pane_reset_mode(wp);
+		}
 		break;
 	case MODEKEYCOPY_HALFPAGEUP:
 		n = screen_size_y(s) / 2;
@@ -472,6 +478,11 @@ window_copy_key(struct window_pane *wp, struct session *sess, int key)
 		}
 		window_copy_update_selection(wp);
 		window_copy_redraw_screen(wp);
+		if (cmd == MODEKEYCOPY_HALFPAGEDOWNCANCEL
+				&& data->oy == 0 && sess != NULL) {
+			window_copy_copy_selection(wp, -1);
+			window_pane_reset_mode(wp);
+		}
 		break;
 	case MODEKEYCOPY_TOPLINE:
 		data->cx = 0;

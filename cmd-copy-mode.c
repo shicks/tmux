@@ -53,7 +53,9 @@ cmd_copy_mode_exec(struct cmd *self, struct cmd_ctx *ctx)
 
 	if (cmd_find_pane(ctx, args_get(args, 't'), NULL, &wp) == NULL)
 		return (CMD_RETURN_ERROR);
-
+	if (wp->mode == &window_copy_mode && args_has(self->args, 'u')) {
+		window_copy_pageup(wp);
+	}
 	if (window_pane_set_mode(wp, &window_copy_mode) != 0)
 		return (CMD_RETURN_NORMAL);
 	window_copy_init_from_pane(wp);

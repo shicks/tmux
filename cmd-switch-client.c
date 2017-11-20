@@ -34,9 +34,9 @@ const struct cmd_entry cmd_switch_client_entry = {
 	.name = "switch-client",
 	.alias = "switchc",
 
-	.args = { "lc:Enpt:rT:k:", 0, 0 },
+	.args = { "lc:Enpt:rT:", 0, 0 },
 	.usage = "[-Elnpr] [-c target-client] [-t target-session] "
-		 "[-T key-table [-k keys]]",
+		 "[-T key-table]",
 
 	/* -t is special */
 

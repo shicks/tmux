@@ -1171,12 +1171,6 @@ struct message_entry {
 	TAILQ_ENTRY(message_entry) entry;
 };
 
-/* Entry in key table list. */
-struct keytable_entry {
-	struct key_table	*table;
-	TAILQ_ENTRY(keytable_entry) entry;
-};
-
 /* Parsed arguments structures. */
 struct args_entry;
 RB_HEAD(args_tree, args_entry);
@@ -1395,7 +1389,7 @@ struct client {
 #define CLIENT_STATUSOFF 0x800000
 	int		 flags;
 	struct key_table *keytable;
-	TAILQ_HEAD(, keytable_entry) keytable_history;
+	key_code	 last_key;
 
 	struct event	 identify_timer;
 	void		(*identify_callback)(struct client *,

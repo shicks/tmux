@@ -33,8 +33,8 @@ const struct cmd_entry cmd_send_keys_entry = {
 	.name = "send-keys",
 	.alias = "send",
 
-	.args = { "lXRMN:t:", 0, -1 },
-	.usage = "[-lXRM] [-N repeat-count] " CMD_TARGET_PANE_USAGE " key ...",
+	.args = { "clXRMN:t:", 0, -1 },
+	.usage = "[-clXRM] [-N repeat-count] " CMD_TARGET_PANE_USAGE " key ...",
 
 	.target = { 't', CMD_FIND_PANE, 0 },
 
@@ -66,6 +66,7 @@ cmd_send_keys_inject(struct client *c, struct cmdq_item *item, key_code key)
 	if (wp->mode == NULL || wp->mode->key_table == NULL) {
 		if (options_get_number(wp->window->options, "xterm-keys"))
 			key |= KEYC_XTERM;
+		log_debug("SDH: inject - window_pane_key: %x", key);
 		window_pane_key(wp, NULL, s, key, NULL);
 		return;
 	}
@@ -124,6 +125,7 @@ cmd_send_keys_exec(struct cmd *self, struct cmdq_item *item)
 			cmdq_error(item, "no mouse target");
 			return (CMD_RETURN_ERROR);
 		}
+		log_debug("SDH: exec - window_pane_key: %x", m->key);
 		window_pane_key(wp, NULL, s, m->key, m);
 		return (CMD_RETURN_NORMAL);
 	}
@@ -163,6 +165,10 @@ cmd_send_keys_exec(struct cmd *self, struct cmdq_item *item)
 			}
 		}
 
+	}
+
+	if (args_has(args, 'c')) {
+		cmd_send_keys_inject(c, item, c->last_key);
 	}
 
 	return (CMD_RETURN_NORMAL);

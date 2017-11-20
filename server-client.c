@@ -127,48 +127,11 @@ server_client_check_nested(struct client *c)
 void
 server_client_set_key_table(struct client *c, const char *name)
 {
-	struct key_table	*new_table;
-	struct key_binding	 bd_find, *bd;
-	struct keytable_entry	*history, *tmp;
-	int			 unref;
-
 	if (name == NULL)
 		name = server_client_get_key_table(c);
 
-	/* SDH: if new table AND old table have cancel then add to history */
-	new_table = key_bindings_get_table(name, 1);
-	/* TODO - how to look up a key? */
-
-	bd_find.key = KEYC_CANCEL;
-	bd = RB_FIND(key_bindings, &c->keytable->key_bindings, &bd_find);
-	unref = 1;
-	if (bd != NULL) {
-		log_debug("SDH: cancel binding found in %s", c->keytable->name);
-		bd = RB_FIND(key_bindings, &new_table->key_bindings, &bd_find);
-		if (bd != NULL) {
-			log_debug("SDH: cancel binding found in %s", new_table->name);
-			unref = 0;
-		}
-	}
-
-	if (unref) {
-		/* Unref the current table and all the rest of history. */
-		log_debug("SDH: unref old table %s, clear history", c->keytable->name);
-		key_bindings_unref_table(c->keytable);
-		TAILQ_FOREACH_SAFE(history, &c->keytable_history, entry, tmp) {
-			key_bindings_unref_table(history->table);
-			TAILQ_REMOVE(&c->keytable_history, history, entry);
-			free(history);
-		}
-	} else {
-		log_debug("SDH: inserting in history: %s", c->keytable->name);
-		history = xcalloc(1, sizeof *history);
-		history->table = c->keytable;
-		TAILQ_INSERT_TAIL(&c->keytable_history, history, entry);
-	}
-	log_debug("SDH: DONE");
-
-	c->keytable = new_table;
+	key_bindings_unref_table(c->keytable);
+	c->keytable = key_bindings_get_table(name, 1);
 	c->keytable->references++;
 }
 
@@ -849,11 +812,12 @@ server_client_handle_key(struct client *c, key_code key)
 	struct window_pane	*wp;
 	struct timeval		 tv;
 	struct key_table	*table, *first;
-	struct keytable_entry	*history, *history1;
 	struct key_binding	 bd_find, *bd;
 	int			 xtimeout, flags;
 	struct cmd_find_state	 fs;
 	key_code		 key0;
+
+	c->last_key = key;
 
 	/* Check the client is good to accept input. */
 	if (s == NULL || (c->flags & (CLIENT_DEAD|CLIENT_SUSPENDED)) != 0)
@@ -897,6 +861,7 @@ server_client_handle_key(struct client *c, key_code key)
 		key = server_client_check_mouse(c);
 		if (key == KEYC_UNKNOWN)
 			return;
+		c->last_key = key;
 
 		m->valid = 1;
 		m->key = key;
@@ -1017,41 +982,38 @@ retry:
 	log_debug("not found in key table %s", table->name);
 	if (!server_client_is_default_key_table(c, table) ||
 	    (c->flags & CLIENT_REPEAT)) {
-		/* TODO SDH - check c->cancel_keys, send them and delete */
-		/* TODO SDH - probably also delete on switch w/o -k, or maybe
-		   any time we go to the root (i.e. in set_key_table) */
-		/* Look at send-keys to see how to send multiple keys */
-		/* Instead, maybe keep a history of tables and send the
-		   cancel binding from each? if no binding then stop, if
-		   all bound then also re-send the key to the pane.  Maybe
-		   only add to history if current table has a cancel binding? */
-		bd = NULL;
-		log_debug("checking history");
-		if (!TAILQ_EMPTY(&c->keytable_history)) {
-			log_debug("history non-empty");
-			history = xcalloc(1, sizeof *history);
-			history->table = c->keytable;
-			TAILQ_INSERT_TAIL(&c->keytable_history, history, entry);
-			c->keytable->references++;
-		}
-		/* SDH - this can go outside the if, though it's a no-op */
-		log_debug("iterating over history");
-		TAILQ_FOREACH_SAFE(history, &c->keytable_history, entry,
-		    history1) {
-			TAILQ_REMOVE(&c->keytable_history, history, entry);
-			bd_find.key = KEYC_CANCEL;
-			bd = RB_FIND(key_bindings, &table->key_bindings,
-			    &bd_find);
+
+		/* If there is a cancel binding, use it. */
+		bd_find.key = KEYC_CANCEL;
+		bd = RB_FIND(key_bindings, &table->key_bindings,
+			     &bd_find);
+		if (bd != NULL) {
+			table->references++;
 			key_bindings_dispatch(bd, NULL, c, m, &fs);
-			key_bindings_unref_table(history->table);
-			free(history);
+			key_bindings_unref_table(table);
 		}
+		/*
+		  SDH: here is an example config, but it doesn't seem to work,
+		       rather we see "Cancel M-[" and then it sends the 36~
+		       literally, then we get the cancelled M-[ [ C-o and then
+		       an extra M-[ [ C-o as well.
+		  ==============================================================
+		  bind -n M-[ switch-client -T CSI
+		  bind -T CSI Cancel display "Cancel M-[" \; send-keys -c M-[
+		  bind -T CSI 3 switch-client -T CSI3
+		  bind -T CSI3 Cancel display "Cancel M-[ 3" \; send-keys -c M-[ 3
+		  bind -T CSI3 6 switch-client -T CSI36
+		  bind -T CSI36 Cancel display "Cancel M-[ 3 6" \; send-keys -c M-[ 3 6
+		  bind -T CSI36 '~' switch-client -T CSI36T
+		  bind -T CSI36T Cancel display "Cancel M-[ 3 6 ~" \; send-keys -c M-[ 3 6 ~
+		  bind -T CSI36T C-O display "Got C-S-O" \; switch-client -T root
+		*/
 
 		server_client_set_key_table(c, NULL);
 		c->flags &= ~CLIENT_REPEAT;
 		server_status_client(c);
 		if (bd != NULL)
-			goto forward;
+			return;
 
 		table = c->keytable;
 		goto retry;

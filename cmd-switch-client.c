@@ -34,9 +34,9 @@ const struct cmd_entry cmd_switch_client_entry = {
 	.name = "switch-client",
 	.alias = "switchc",
 
-	.args = { "lc:Enpt:rT:", 0, 0 },
+	.args = { "lc:Enpt:rT:k:", 0, 0 },
 	.usage = "[-Elnpr] [-c target-client] [-t target-session] "
-		 "[-T key-table]",
+		 "[-T key-table [-k keys]]",
 
 	/* -t is special */
 
@@ -84,6 +84,9 @@ cmd_switch_client_exec(struct cmd *self, struct cmdq_item *item)
 			cmdq_error(item, "table %s doesn't exist", tablename);
 			return (CMD_RETURN_ERROR);
 		}
+		/* TODO SDH: don't unref if has cancel binding... */
+		/*    grep for unref_table, set_key_table, keytable\ =, etc */
+		/*    probably want helper funcs for handling table history */
 		table->references++;
 		key_bindings_unref_table(c->keytable);
 		c->keytable = table;

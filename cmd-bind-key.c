@@ -50,7 +50,7 @@ cmd_bind_key_exec(struct cmd *self, struct cmdq_item *item)
 	key_code	 key;
 	const char	*tablename;
 
-	key = key_string_lookup_string(args->argv[0]);
+        key = key_string_lookup_string(args->argv[0]);
 	if (key == KEYC_NONE || key == KEYC_UNKNOWN) {
 		cmdq_error(item, "unknown key: %s", args->argv[0]);
 		return (CMD_RETURN_ERROR);

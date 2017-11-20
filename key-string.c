@@ -170,6 +170,9 @@ key_string_lookup_string(const char *string)
 	if (strcasecmp(string, "None") == 0)
 		return (KEYC_NONE);
 
+	if (strcasecmp(string, "Cancel") == 0)
+		return (KEYC_CANCEL);
+
 	/* Is this a hexadecimal value? */
 	if (string[0] == '0' && string[1] == 'x') {
 	        if (sscanf(string + 2, "%x", &u) != 1)
@@ -251,6 +254,8 @@ key_string_lookup_key(key_code key)
 	/* Handle special keys. */
 	if (key == KEYC_UNKNOWN)
 		return ("Unknown");
+	if (key == KEYC_CANCEL)
+		return ("Cancel");
 	if (key == KEYC_FOCUS_IN)
 		return ("FocusIn");
 	if (key == KEYC_FOCUS_OUT)

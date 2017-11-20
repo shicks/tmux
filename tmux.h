@@ -95,6 +95,7 @@ struct tmuxproc;
 /* Special key codes. */
 #define KEYC_NONE 0xffff00000000ULL
 #define KEYC_UNKNOWN 0xfffe00000000ULL
+#define KEYC_CANCEL 0xfffd00000000ULL
 #define KEYC_BASE 0x000010000000ULL
 #define KEYC_USER 0x000020000000ULL
 
@@ -1170,6 +1171,12 @@ struct message_entry {
 	TAILQ_ENTRY(message_entry) entry;
 };
 
+/* Entry in key table list. */
+struct keytable_entry {
+	struct key_table	*table;
+	TAILQ_ENTRY(keytable_entry) entry;
+};
+
 /* Parsed arguments structures. */
 struct args_entry;
 RB_HEAD(args_tree, args_entry);
@@ -1388,6 +1395,7 @@ struct client {
 #define CLIENT_STATUSOFF 0x800000
 	int		 flags;
 	struct key_table *keytable;
+	TAILQ_HEAD(, keytable_entry) keytable_history;
 
 	struct event	 identify_timer;
 	void		(*identify_callback)(struct client *,
